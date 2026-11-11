@@ -1,0 +1,146 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>$(ModAssemblyName)</AssemblyName>
+    <RootNamespace>Manimal.MaskMaintenance</RootNamespace>
+    <Authors>$(ModAuthor)</Authors>
+    <Version>$(ModVersion)</Version>
+    <Product>$(ModName)</Product>
+    <RepositoryUrl>$(ModRepositoryUrl)</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <AssemblyVersion>$(ModVersion).0</AssemblyVersion>
+    <FileVersion>$(AssemblyVersion)</FileVersion>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <Configurations>Debug;Release</Configurations>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <!-- local animation tooling, not part of the plugin -->
+  <ItemGroup>
+    <Compile Remove="unity\**" />
+    <Compile Remove="anim\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="UnityEngine">
+      <HintPath>$(SptPath)\EscapeFromTarkov_Data\Managed\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(SptPath)\EscapeFromTarkov_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AnimationModule">
+      <HintPath>$(SptPath)\EscapeFromTarkov_Data\Managed\UnityEngine.AnimationModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AssetBundleModule">
+      <HintPath>$(SptPath)\EscapeFromTarkov_Data\Managed\UnityEngine.AssetBundleModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- KeyboardShortcut.IsDown reads UnityEngine.Input -->
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(SptPath)\EscapeFromTarkov_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="BepInEx">
+      <HintPath>$(SptPath)\BepInEx\core\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(SptPath)\BepInEx\core\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="spt-reflection">
+      <HintPath>$(SptPath)\BepInEx\plugins\spt\spt-reflection.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(SptPath)\EscapeFromTarkov_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Comfort">
+      <HintPath>$(SptPath)\EscapeFromTarkov_Data\Managed\Comfort.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="AnimationSystem.Types">
+      <HintPath>$(SptPath)\EscapeFromTarkov_Data\Managed\AnimationSystem.Types.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- eft monobehaviours derive from sirenix's SerializedMonoBehaviour -->
+    <Reference Include="Sirenix.Serialization">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>$(SptPath)\EscapeFromTarkov_Data\Managed\Sirenix.Serialization.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>SourceRepository</_Parameter1>
+      <_Parameter2>$(ModRepositoryUrl)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>SupportedSptVersionRange</_Parameter1>
+      <_Parameter2>$(SupportedSptVersionRange)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <Target Name="ValidateSptReferences" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(SptPath)\EscapeFromTarkov_Data\Managed\Assembly-CSharp.dll')"
+           Text="Set SptPath to an SPT 4.1 installation (for example, -p:SptPath=D:\SPT41Dev)." />
+  </Target>
+
+  <Target Name="GenerateModInfo" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <ModInfoFile>$(IntermediateOutputPath)ModInfo.g.cs</ModInfoFile>
+    </PropertyGroup>
+    <ItemGroup>
+      <_ModInfoLines Remove="@(_ModInfoLines)" />
+      <_ModInfoLines Include="// generated from Directory.Build.props. do not edit." />
+      <_ModInfoLines Include="namespace $(RootNamespace) { internal static class ModInfo {" />
+      <_ModInfoLines Include="public const string Version = %22$(ModVersion)%22%3B" />
+      <_ModInfoLines Include="public const string Guid = %22$(ModGuid)%22%3B" />
+      <_ModInfoLines Include="public const string Name = %22$(ModName)%22%3B" />
+      <_ModInfoLines Include="} }" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(ModInfoFile)" Lines="@(_ModInfoLines)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <Compile Include="$(ModInfoFile)" />
+      <FileWrites Include="$(ModInfoFile)" />
+    </ItemGroup>
+  </Target>
+
+  <PropertyGroup>
+    <WipeBundle>$(MSBuildProjectDirectory)\bundles\visor_wipe.bundle</WipeBundle>
+    <WipePath>$(MSBuildProjectDirectory)\bundles\visor_wipe.path.txt</WipePath>
+    <PluginFolder>$(ModName)</PluginFolder>
+  </PropertyGroup>
+
+  <!-- opt-in: dotnet build -c Release -p:DeployToGame=true -->
+  <Target Name="DeployToSPTDev" AfterTargets="Build" Condition="'$(DeployToGame)' == 'true'">
+    <MakeDir Directories="$(SptPath)\BepInEx\plugins\$(PluginFolder)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(SptPath)\BepInEx\plugins\$(PluginFolder)" />
+    <Copy SourceFiles="$(WipeBundle)" DestinationFolder="$(SptPath)\BepInEx\plugins\$(PluginFolder)" Condition="Exists('$(WipeBundle)')" />
+    <Copy SourceFiles="$(WipePath)" DestinationFolder="$(SptPath)\BepInEx\plugins\$(PluginFolder)" Condition="Exists('$(WipePath)')" />
+  </Target>
+
+  <Target Name="PackageModForDistribution" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <PropertyGroup>
+      <ZipFileName>$(ModName)-$(ModVersion).zip</ZipFileName>
+      <TempPackageDir>$(MSBuildProjectDirectory)\obj\Package</TempPackageDir>
+      <ModPackageDir>$(TempPackageDir)\BepInEx\plugins\$(PluginFolder)</ModPackageDir>
+    </PropertyGroup>
+    <RemoveDir Directories="$(TempPackageDir)" />
+    <MakeDir Directories="$(ModPackageDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModPackageDir)" />
+    <Copy SourceFiles="$(WipeBundle)" DestinationFolder="$(ModPackageDir)" Condition="Exists('$(WipeBundle)')" />
+    <Copy SourceFiles="$(WipePath)" DestinationFolder="$(ModPackageDir)" Condition="Exists('$(WipePath)')" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\LICENSE" DestinationFolder="$(ModPackageDir)" Condition="Exists('$(MSBuildProjectDirectory)\LICENSE')" />
+    <ZipDirectory SourceDirectory="$(TempPackageDir)" DestinationFile="$(MSBuildProjectDirectory)\$(ZipFileName)" Overwrite="true" />
+    <RemoveDir Directories="$(TempPackageDir)" />
+    <Message Text="Packaged: $(MSBuildProjectDirectory)\$(ZipFileName)" Importance="high" />
+  </Target>
+</Project>

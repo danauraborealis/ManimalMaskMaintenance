@@ -1,0 +1,17 @@
+<Project>
+  <!-- single source of truth for plugin identity, version and compatibility -->
+  <PropertyGroup>
+    <ModVersion>1.0.0</ModVersion>
+    <ModAuthor>Manimal</ModAuthor>
+    <ModId>MaskMaintenance</ModId>
+    <ModGuid>com.manimal.maskmaintenance</ModGuid>
+    <ModName>$(ModAuthor)-$(ModId)</ModName>
+    <ModAssemblyName>$(ModAuthor).$(ModId)</ModAssemblyName>
+    <ModRepositoryUrl>https://github.com/danauraborealis/ManimalMaskMaintenance</ModRepositoryUrl>
+    <SupportedSptVersionRange>&gt;=4.1.0 &lt;4.2.0</SupportedSptVersionRange>
+    <SptPath Condition="'$(SptPath)' == ''">D:\SPT41Dev</SptPath>
+    <DeployToGame Condition="'$(DeployToGame)' == ''">false</DeployToGame>
+    <!-- keeps the local checkout path out of the dll -->
+    <PathMap>$(MSBuildThisFileDirectory)=/_/</PathMap>
+  </PropertyGroup>
+</Project>
