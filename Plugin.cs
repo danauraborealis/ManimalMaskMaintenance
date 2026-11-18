@@ -22,6 +22,7 @@ namespace Manimal.MaskMaintenance
         internal static ConfigEntry<float> RefogMinutes;
         internal static ConfigEntry<float> CleanAmount;
         internal static ConfigEntry<float> ExtraFog;
+        internal static ConfigEntry<bool> ShieldIsGlass;
         internal static ConfigEntry<bool> PlayAnimation;
         internal static ConfigEntry<float> BlendInTime;
         internal static ConfigEntry<float> BlendOutTime;
@@ -44,6 +45,8 @@ namespace Manimal.MaskMaintenance
             ExtraFog = Config.Bind("General", "Extra fog past vanilla", 0.7f,
                 new ConfigDescription("How much worse than vanilla an unwiped visor gets. 0 stops at the vanilla look.",
                     new AcceptableValueRange<float>(0f, 1f)));
+            ShieldIsGlass = Config.Bind("General", "Rain lands on the face shield", true,
+                "A lowered face shield counts as glass for rain, the way eyewear does: smaller drops that stay longer, plus running water. Off keeps the vanilla bare-eyes drops. The wipe clears rain either way.");
 
             PlayAnimation = Config.Bind("Animation", "Play hand animation", true,
                 "Left hand wipe animation. Off wipes the visor with no animation.");
@@ -61,6 +64,8 @@ namespace Manimal.MaskMaintenance
             TryEnable(() => new VisorRenderPatch().Enable(), nameof(VisorRenderPatch));
             TryEnable(() => new PwaResetPatch().Enable(), nameof(PwaResetPatch));
             TryEnable(() => new GameWorldDisposePatch().Enable(), nameof(GameWorldDisposePatch));
+            TryEnable(() => new GlassesChangedPatch().Enable(), nameof(GlassesChangedPatch));
+            RainGlass.Init();
         }
 
         private static void TryEnable(Action enable, string name)
@@ -113,6 +118,7 @@ namespace Manimal.MaskMaintenance
             }
 
             VisorFog.Tick(player, Time.deltaTime);
+            RainGlass.Tick(player);
 
             if (WipeKey.Value.IsDown())
             {

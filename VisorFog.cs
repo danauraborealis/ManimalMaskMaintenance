@@ -321,6 +321,7 @@ namespace Manimal.MaskMaintenance
         {
             float aspect = Screen.height > 0 ? Screen.width / (float)Screen.height : 16f / 9f;
             float strength = Plugin.CleanAmount.Value;
+            RainGlass.Wipe(centre.x, aspect, BrushRadius);
             float inner = BrushRadius * 0.45f;
 
             int yMin = Mathf.Max(0, Mathf.FloorToInt((centre.y - BrushRadius) * H));

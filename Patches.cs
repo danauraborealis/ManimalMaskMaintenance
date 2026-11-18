@@ -123,6 +123,24 @@ namespace Manimal.MaskMaintenance
         }
     }
 
+    // the game re-sends the eyewear state whenever head gear changes. keep it on while a shield is down.
+    public class GlassesChangedPatch : ModulePatch
+    {
+        protected override MethodBase GetTargetMethod()
+        {
+            return AccessTools.Method(typeof(EffectsController), nameof(EffectsController.OnGlassesChanged));
+        }
+
+        [PatchPrefix]
+        private static void Prefix(ref bool isActive)
+        {
+            if (RainGlass.ShieldDown)
+            {
+                isActive = true;
+            }
+        }
+    }
+
     public class GameWorldDisposePatch : ModulePatch
     {
         protected override MethodBase GetTargetMethod()
@@ -138,6 +156,7 @@ namespace Manimal.MaskMaintenance
             PwaResetPatch.Clear();
             VisorRenderPatch.Restore();
             VisorFog.Reset();
+            RainGlass.Reset();
         }
     }
 }
