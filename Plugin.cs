@@ -66,6 +66,9 @@ namespace Manimal.MaskMaintenance
             TryEnable(() => new GameWorldDisposePatch().Enable(), nameof(GameWorldDisposePatch));
             TryEnable(() => new GlassesChangedPatch().Enable(), nameof(GlassesChangedPatch));
             RainGlass.Init();
+            ClinSpray.Init();
+            TryEnable(() => new ClinDropPatch().Enable(), nameof(ClinDropPatch));
+            TryEnable(() => new ClinHighlightPatch().Enable(), nameof(ClinHighlightPatch));
         }
 
         private static void TryEnable(Action enable, string name)

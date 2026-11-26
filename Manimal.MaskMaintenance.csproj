@@ -19,6 +19,7 @@
 
   <!-- local animation tooling, not part of the plugin -->
   <ItemGroup>
+    <Compile Remove="Server\**" />
     <Compile Remove="unity\**" />
     <Compile Remove="anim\**" />
   </ItemGroup>
@@ -51,6 +52,19 @@
     </Reference>
     <Reference Include="0Harmony">
       <HintPath>$(SptPath)\BepInEx\core\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="ItemComponent.Types">
+      <HintPath>$(SptPath)\EscapeFromTarkov_Data\Managed\ItemComponent.Types.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="spt-common">
+      <HintPath>$(SptPath)\BepInEx\plugins\spt\spt-common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- PointerEventData, for the drop handler -->
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(SptPath)\EscapeFromTarkov_Data\Managed\UnityEngine.UI.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="spt-reflection">
@@ -127,20 +141,5 @@
     <Copy SourceFiles="$(WipePath)" DestinationFolder="$(SptPath)\BepInEx\plugins\$(PluginFolder)" Condition="Exists('$(WipePath)')" />
   </Target>
 
-  <Target Name="PackageModForDistribution" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
-    <PropertyGroup>
-      <ZipFileName>$(ModName)-$(ModVersion).zip</ZipFileName>
-      <TempPackageDir>$(MSBuildProjectDirectory)\obj\Package</TempPackageDir>
-      <ModPackageDir>$(TempPackageDir)\BepInEx\plugins\$(PluginFolder)</ModPackageDir>
-    </PropertyGroup>
-    <RemoveDir Directories="$(TempPackageDir)" />
-    <MakeDir Directories="$(ModPackageDir)" />
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModPackageDir)" />
-    <Copy SourceFiles="$(WipeBundle)" DestinationFolder="$(ModPackageDir)" Condition="Exists('$(WipeBundle)')" />
-    <Copy SourceFiles="$(WipePath)" DestinationFolder="$(ModPackageDir)" Condition="Exists('$(WipePath)')" />
-    <Copy SourceFiles="$(MSBuildProjectDirectory)\LICENSE" DestinationFolder="$(ModPackageDir)" Condition="Exists('$(MSBuildProjectDirectory)\LICENSE')" />
-    <ZipDirectory SourceDirectory="$(TempPackageDir)" DestinationFile="$(MSBuildProjectDirectory)\$(ZipFileName)" Overwrite="true" />
-    <RemoveDir Directories="$(TempPackageDir)" />
-    <Message Text="Packaged: $(MSBuildProjectDirectory)\$(ZipFileName)" Importance="high" />
-  </Target>
+  <!-- the release zip is put together by Server\MaskMaintenanceServer.csproj, which builds after this -->
 </Project>

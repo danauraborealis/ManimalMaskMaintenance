@@ -44,6 +44,7 @@ namespace Manimal.MaskMaintenance
         private static bool _maskStale = true;
         private static float _growTimer;
 
+        private static string _shieldId;
         private static bool _wiping;
         private static float _wipeTime;
         private static float _wipeLength;
@@ -53,6 +54,7 @@ namespace Manimal.MaskMaintenance
         internal static float ScratchScale { get; private set; } = 1f;
         internal static float BlurSizeScale { get; private set; } = 1f;
         internal static Texture2D Mask => _mask;
+        internal static string ShieldId => Active ? _shieldId : null;
 
         // no player to read: stop touching the visor until there is one again
         internal static void Suspend()
@@ -101,12 +103,19 @@ namespace Manimal.MaskMaintenance
             }
 
             // stays on while the visor slides up, so the smudge does not pop back to stock mid-slide
-            Active = visor.enabled && GlassOf(player) != null;
+            FaceShieldComponent glass = GlassOf(player);
+            if (glass != null)
+            {
+                // taking a treated shield into a raid uses the treatment up, lowered or not
+                ClinSpray.MarkWorn(glass.Item.Id);
+            }
+            Active = visor.enabled && glass != null;
             if (!Active)
             {
                 _wiping = false;
                 return;
             }
+            _shieldId = glass.Item.Id;
 
             if (_wiping)
             {
@@ -224,11 +233,28 @@ namespace Manimal.MaskMaintenance
 
         private static void Grow(float dt)
         {
-            float rate = dt / (Plugin.RefogMinutes.Value * 60f);
+            // a Clin-treated shield fogs slower and stops at the stock look
+            bool treated = ClinSpray.IsTreated(_shieldId);
+            float limit = treated ? VanillaPoint : 1f;
+            float rate = dt / (Plugin.RefogMinutes.Value * 60f) * (treated ? ClinSpray.GrowthScale : 1f);
             for (int i = 0; i < Dirt.Length; i++)
             {
                 float d = Dirt[i] + rate * Growth[i];
-                Dirt[i] = d > 1f ? 1f : d;
+                // a shield treated part way through a raid keeps what it had until it is wiped
+                Dirt[i] = d > limit ? Mathf.Max(limit, Dirt[i]) : d;
+            }
+            _maskStale = true;
+        }
+
+        // spraying mid-raid takes the extra fog straight off
+        internal static void ClampToVanilla()
+        {
+            for (int i = 0; i < Dirt.Length; i++)
+            {
+                if (Dirt[i] > VanillaPoint)
+                {
+                    Dirt[i] = VanillaPoint;
+                }
             }
             _maskStale = true;
         }

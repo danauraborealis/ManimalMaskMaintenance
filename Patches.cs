@@ -1,9 +1,12 @@
 using System.Reflection;
 using EFT;
 using EFT.Animations;
+using EFT.InventoryLogic;
+using EFT.UI.DragAndDrop;
 using HarmonyLib;
 using SPT.Reflection.Patching;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace Manimal.MaskMaintenance
 {
@@ -141,6 +144,89 @@ namespace Manimal.MaskMaintenance
         }
     }
 
+    // the game's own drop handler ends with a special case for a repair kit dropped on an item.
+    // a Clin bottle dropped on a face shield is answered here, before it.
+    public class ClinDropPatch : ModulePatch
+    {
+        protected override MethodBase GetTargetMethod()
+        {
+            return AccessTools.Method(typeof(ItemView), nameof(ItemView.ProcessItem),
+                new[] { typeof(DragItemContext), typeof(PointerEventData) });
+        }
+
+        [PatchPrefix]
+        private static bool Prefix(DragItemContext dragItemContext, PointerEventData eventData)
+        {
+            try
+            {
+                Item clin = dragItemContext?.Item;
+                if (clin == null || clin.TemplateId != ClinSpray.ClinTpl || !eventData?.pointerEnter)
+                {
+                    return true;
+                }
+
+                ItemView over = eventData.pointerEnter.GetComponentInParent<ItemView>();
+                Item target = over && over.ItemContext != null ? over.ItemContext.Item : null;
+                if (target == null || target == clin || !ClinSpray.TrySpray(clin, target))
+                {
+                    return true;
+                }
+
+                dragItemContext.DragCancelled();
+                return false;
+            }
+            catch (System.Exception e)
+            {
+                // never leave a dragged item stuck: fall back to the game's own handling
+                Plugin.Log.LogError($"clin drop failed: {e}");
+                return true;
+            }
+        }
+    }
+
+    // while an item is held the game asks every item view whether it would take it and tints the
+    // ones that would. the game says no for Clin, so answer for face shields here: green if it
+    // can be sprayed, red if not. the game's own call with null at drag end clears the tint.
+    public class ClinHighlightPatch : ModulePatch
+    {
+        private static readonly Color CanSpray = new Color(0f, 1f, 0f, 0.25f);
+        private static readonly Color Refused = new Color(1f, 0f, 0f, 0.3f);
+
+        protected override MethodBase GetTargetMethod()
+        {
+            return AccessTools.Method(typeof(GridItemView), nameof(GridItemView.CheckAcceptHandler),
+                new[] { typeof(DragItemContext) });
+        }
+
+        [PatchPostfix]
+        private static void Postfix(GridItemView __instance, DragItemContext dragItemContext,
+            ref Color ___SelectedColor, ref bool ___HighlightedGlobally)
+        {
+            try
+            {
+                Item clin = dragItemContext?.Item;
+                Item target = __instance.Item;
+                if (clin == null || clin.TemplateId != ClinSpray.ClinTpl || target == null || target == clin)
+                {
+                    return;
+                }
+
+                ClinSpray.Verdict verdict = ClinSpray.Check(clin, target, out _, out _);
+                if (verdict == ClinSpray.Verdict.NotOurs)
+                {
+                    return;
+                }
+                ___SelectedColor = verdict == ClinSpray.Verdict.CanSpray ? CanSpray : Refused;
+                ___HighlightedGlobally = true;
+                __instance.UpdateColor();
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogError($"clin highlight failed: {e}");
+            }
+        }
+    }
+
     public class GameWorldDisposePatch : ModulePatch
     {
         protected override MethodBase GetTargetMethod()
@@ -156,6 +242,7 @@ namespace Manimal.MaskMaintenance
             PwaResetPatch.Clear();
             VisorRenderPatch.Restore();
             VisorFog.Reset();
+            ClinSpray.EndRaid();
             RainGlass.Reset();
         }
     }
